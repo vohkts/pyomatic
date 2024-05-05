@@ -23,6 +23,7 @@ if not os.path.exists(CONFIG_DIR):
 
 # Configuration file path
 CONFIG_FILE = os.path.join(CONFIG_DIR, 'pyomatic.cfg')
+print(f"Config loaded from {CONFIG_DIR}")
 
 # Configuration section and keys
 SECTION = 'Settings'
