@@ -2,6 +2,14 @@ import os
 import platform
 import subprocess
 
+# Determine the configuration directory based on the OS
+if platform.system() in ['Linux', 'Darwin']:
+    CONFIG_DIR = '/var/opt'
+elif platform.system() == 'Windows':
+    CONFIG_DIR = os.path.join(os.getenv('APPDATA'), 'pyomatic')
+else:
+    raise NotImplementedError("Unsupported OS")
+
 # Constants
 SCRIPT_NAME = 'pyomatic.py'
 SCRIPT_PATH = os.path.abspath(SCRIPT_NAME)

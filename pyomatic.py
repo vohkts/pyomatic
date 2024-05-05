@@ -3,16 +3,33 @@ import requests
 import configparser
 import urllib.parse
 from datetime import datetime
+import platform
 
-# Configuration file and section/keys
-CONFIG_FILE = 'pyomatic.cfg'
+# Determine the configuration directory based on the OS
+if platform.system() in ['Linux', 'Darwin']:
+    CONFIG_DIR = '/var/opt'
+elif platform.system() == 'Windows':
+    CONFIG_DIR = os.path.join(os.getenv('APPDATA'), 'pyomatic')
+else:
+    raise NotImplementedError("Unsupported OS")
+
+# Ensure the configuration directory exists
+if not os.path.exists(CONFIG_DIR):
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+
+# Configuration file path
+CONFIG_FILE = os.path.join(CONFIG_DIR, 'pyomatic.cfg')
+
+# Logging file path for Unix-like systems
+LOG_FILE = '/var/log/pyomatic.log' if platform.system() in ['Linux', 'Darwin'] else os.path.join(CONFIG_DIR, 'pyomatic.log')
+
+# Configuration section and keys
 SECTION = 'Settings'
 IP_KEY = 'current_ip'
 EMAIL_KEY = 'user_email'
 PW_KEY = 'user_pw'
 HOSTNAME_KEY = 'hostname'
 LAST_UPDATE_KEY = 'last_update'
-LOG_FILE = '/var/log/pyomatic.log'
 
 # Function to prompt for user input and save it to the config file
 def prompt_and_store(config, section, key, prompt_message):
