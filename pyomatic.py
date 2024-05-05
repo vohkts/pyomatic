@@ -8,8 +8,12 @@ import platform
 # Determine the configuration directory based on the OS
 if platform.system() in ['Linux', 'Darwin']:
     CONFIG_DIR = '/var/opt'
+    LOG_FILE = '/var/log/pyomatic.log'
+    PYTHON_CMD = 'python3'
 elif platform.system() == 'Windows':
     CONFIG_DIR = os.path.join(os.getenv('APPDATA'), 'pyomatic')
+    LOG_FILE = os.path.join(CONFIG_DIR, 'pyomatic.log')
+    PYTHON_CMD = 'python'
 else:
     raise NotImplementedError("Unsupported OS")
 
@@ -19,9 +23,6 @@ if not os.path.exists(CONFIG_DIR):
 
 # Configuration file path
 CONFIG_FILE = os.path.join(CONFIG_DIR, 'pyomatic.cfg')
-
-# Logging file path for Unix-like systems
-LOG_FILE = '/var/log/pyomatic.log' if platform.system() in ['Linux', 'Darwin'] else os.path.join(CONFIG_DIR, 'pyomatic.log')
 
 # Configuration section and keys
 SECTION = 'Settings'
