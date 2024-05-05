@@ -14,18 +14,23 @@ def is_unix():
 def setup_cron(interval_minutes):
     cron_entry = f"*/{interval_minutes} * * * * {SCRIPT_PATH} > /dev/null 2>&1"
     existing_crontab = subprocess.run(['crontab', '-l'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    
-    if SCRIPT_PATH in existing_crontab.stdout.decode():
-        existing_lines = existing_crontab.stdout.decode().splitlines()
+    crontab_content = existing_crontab.stdout.decode()
+
+    if SCRIPT_PATH in crontab_content:
+        existing_lines = crontab_content.splitlines()
         updated_lines = [line if SCRIPT_PATH not in line else cron_entry for line in existing_lines]
         new_crontab = '\n'.join(updated_lines)
     else:
-        new_crontab = existing_crontab.stdout.decode() + f"\n{cron_entry}"
+        new_crontab = crontab_content + f"\n{cron_entry}"
+
+    new_crontab = new_crontab.strip() + '\n'  # Ensure the crontab ends with a newline
 
     with open('new_crontab', 'w') as f:
         f.write(new_crontab)
+
     subprocess.run(['crontab', 'new_crontab'])
     os.remove('new_crontab')
+    print(f"Created/updated cron job to run every {interval_minutes} minutes.")
 
 # Function to set up a Windows Scheduled Task
 def setup_scheduled_task(interval_minutes):
