@@ -5,10 +5,18 @@ import subprocess
 # Determine the configuration directory based on the OS
 if platform.system() in ['Linux', 'Darwin']:
     CONFIG_DIR = '/var/opt'
+    LOG_FILE = '/var/log/pyomatic.log'
+    PYTHON_CMD = 'python3'
 elif platform.system() == 'Windows':
     CONFIG_DIR = os.path.join(os.getenv('APPDATA'), 'pyomatic')
+    LOG_FILE = os.path.join(CONFIG_DIR, 'pyomatic.log')
+    PYTHON_CMD = 'python3'
 else:
     raise NotImplementedError("Unsupported OS")
+
+# Ensure the configuration directory exists
+if not os.path.exists(CONFIG_DIR):
+    os.makedirs(CONFIG_DIR, exist_ok=True)
 
 # Constants
 SCRIPT_NAME = 'pyomatic.py'
@@ -20,7 +28,7 @@ def is_unix():
 
 # Function to set up a cron job
 def setup_cron(interval_minutes):
-    cron_entry = f"*/{interval_minutes} * * * * {SCRIPT_PATH} > /dev/null 2>&1"
+    cron_entry = f"*/{interval_minutes} * * * * {PYTHON_CMD} {SCRIPT_PATH} >> {LOG_FILE} 2>&1"
     existing_crontab = subprocess.run(['crontab', '-l'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     crontab_content = existing_crontab.stdout.decode()
 
@@ -44,12 +52,12 @@ def setup_cron(interval_minutes):
 def setup_scheduled_task(interval_minutes):
     interval_minutes = int(interval_minutes)
     task_name = 'PyomaticUpdate'
-    cmd = f"schtasks /Create /F /SC MINUTE /MO {interval_minutes} /TN {task_name} /TR \"python {SCRIPT_PATH}\""
+    cmd = f"schtasks /Create /F /SC MINUTE /MO {interval_minutes} /TN {task_name} /TR \"{PYTHON_CMD} {SCRIPT_PATH} >> {LOG_FILE} 2>&1\""
 
     # Check if the task already exists
     result = subprocess.run(['schtasks', '/Query', '/TN', task_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode == 0:
-        update_cmd = f"schtasks /Change /TN {task_name} /SC MINUTE /MO {interval_minutes} /TR \"python {SCRIPT_PATH}\""
+        update_cmd = f"schtasks /Change /TN {task_name} /SC MINUTE /MO {interval_minutes} /TR \"{PYTHON_CMD} {SCRIPT_PATH} >> {LOG_FILE} 2>&1\""
         subprocess.run(update_cmd, shell=True)
         print(f"Updated existing task '{task_name}' to run every {interval_minutes} minutes.")
     else:
