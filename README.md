@@ -71,11 +71,27 @@ More details are available at the [DNS-O-Matic API Documentation](https://www.dn
 ## Usage
 1. Clone or download this repository.
 2. Ensure you have Python 3 and `requests` installed.
-3. Run the script:
+3. Make sure `pyomatic.py` is executable by running:
+```bash
+chmod +x pyomatic.py
+```
+
+4. Run the script:
 
 ```bash
 python pyomatic.py
 ```
+
+### Optional
+Run `autoupdate.py` to set up the time-based job:
+```bash
+python autoupdate.py
+```
+
+#### Notes
+For Unix-like systems, a cron job is created.
+For Windows, a Scheduled Task is created.
+
 
 ### Example Output
 

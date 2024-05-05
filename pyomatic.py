@@ -2,6 +2,7 @@ import os
 import requests
 import configparser
 import urllib.parse
+from datetime import datetime
 
 # Configuration file and section/keys
 CONFIG_FILE = 'pyomatic.cfg'
@@ -10,6 +11,8 @@ IP_KEY = 'current_ip'
 EMAIL_KEY = 'user_email'
 PW_KEY = 'user_pw'
 HOSTNAME_KEY = 'hostname'
+LAST_UPDATE_KEY = 'last_update'
+LOG_FILE = '/var/log/pyomatic.log'
 
 # Function to prompt for user input and save it to the config file
 def prompt_and_store(config, section, key, prompt_message):
@@ -36,10 +39,20 @@ def interpret_response(response_text):
         if response_text.startswith(key):
             if key in ['good', 'nochg']:
                 ip = response_text.split()[1] if len(response_text.split()) > 1 else "unknown"
-                return f"{message} (IP: {ip})"
-            return message
+                return f"{message} (IP: {ip})", key
+            return message, key
 
-    return "Unknown response received from DNS-O-Matic."
+    return "Unknown response received from DNS-O-Matic.", "unknown"
+
+# Function to log updates to the log file
+def log_update(message, hostname, response_code):
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    log_entry = f"{timestamp} - Hostname: {hostname}, Response: {response_code}, Message: {message}\n"
+    try:
+        with open(LOG_FILE, 'a') as logfile:
+            logfile.write(log_entry)
+    except PermissionError:
+        print(f"Permission error writing to {LOG_FILE}. Run as root or change permissions.")
 
 # Initialize the config parser without interpolation
 config = configparser.ConfigParser(interpolation=None)
@@ -61,6 +74,10 @@ if PW_KEY not in config[SECTION]:
 if HOSTNAME_KEY not in config[SECTION]:
     prompt_and_store(config, SECTION, HOSTNAME_KEY, 'Enter your hostname: ')
 
+# Ensure `last_update` exists in the config
+if LAST_UPDATE_KEY not in config[SECTION]:
+    config[SECTION][LAST_UPDATE_KEY] = ''
+
 # Write any newly gathered data to the config file
 with open(CONFIG_FILE, 'w') as configfile:
     config.write(configfile)
@@ -76,15 +93,16 @@ try:
     response.raise_for_status()
     curIPaddr = response.text.strip()
 except requests.RequestException as e:
-    print(f"Error fetching IP address: {e}")
+    log_update(f"Error fetching IP address: {e}", HOSTNAME, "error")
     exit(1)
 
 # Check the previously stored IP address
 stored_ip = config[SECTION].get(IP_KEY, '')
 
-# Update the config and DNS-o-Matic if the IP address has changed
+# Update the config and DNS-O-Matic if the IP address has changed
 if stored_ip != curIPaddr:
     config[SECTION][IP_KEY] = curIPaddr
+    config[SECTION][LAST_UPDATE_KEY] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with open(CONFIG_FILE, 'w') as configfile:
         config.write(configfile)
 
@@ -94,9 +112,12 @@ if stored_ip != curIPaddr:
     try:
         update_response = requests.get(update_url)
         update_response.raise_for_status()
-        response_message = interpret_response(update_response.text.strip())
+        response_message, response_code = interpret_response(update_response.text.strip())
+        log_update(response_message, HOSTNAME, response_code)
         print(f"DNS-o-Matic update response: {response_message}")
     except requests.RequestException as e:
+        log_update(f"Error updating DNS-o-Matic: {e}", HOSTNAME, "error")
         print(f"Error updating DNS-o-Matic: {e}")
 else:
+    log_update(f"IP address {curIPaddr} is already up-to-date.", HOSTNAME, "nochg")
     print(f"IP address {curIPaddr} is already up-to-date.")
